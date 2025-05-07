@@ -1,12 +1,23 @@
 {
+  "name": "lab.cdk",
+  "version": "0.1.0",
+  "bin": {
+    "blossom-cdk": "bin/cdk.ts"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "cdk": "cdk",
+    "deploy": "cdk deploy --require-approval never",
+    "synth": "cdk synth"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.0.0",
+    "aws-cdk": "2.130.0"
+  },
   "dependencies": {
-    "@aws-cdk/aws-ec2": "^1.204.0",
-    "@aws-cdk/aws-ecr-assets": "^1.204.0",
-    "@aws-cdk/aws-ecs": "^1.204.0",
-    "@aws-cdk/aws-ecs-patterns": "^1.204.0",
-    "@aws-cdk/aws-iam": "^1.204.0",
-    "@aws-cdk/aws-logs": "^1.204.0",
-    "@aws-cdk/aws-rds": "^1.204.0",
-    "aws-cdk-lib": "^2.194.0"
+    "constructs": "^10.0.0",
+    "aws-cdk-lib": "2.130.0"
   }
 }
