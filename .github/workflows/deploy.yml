@@ -33,10 +33,10 @@ jobs:
           node-version: 18
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Compile TypeScript
         run: npm run build
 
-      - name: Deploy with CDK
+      - name: CDK deploy
         run: npx cdk deploy --require-approval never
