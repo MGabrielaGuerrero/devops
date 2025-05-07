@@ -27,16 +27,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}  
 
-      - name: Setup Node.js
+       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Install CDK dependencies
         run: npm install
+        working-directory: cdk
 
-      - name: Compile TypeScript
+      - name: Compile CDK
         run: npm run build
+        working-directory: cdk
 
       - name: CDK deploy
         run: npx cdk deploy --require-approval never
+        working-directory: cdk
