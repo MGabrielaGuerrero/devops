@@ -7,7 +7,7 @@ export class Stack extends cdk.Stack {
     super(scope, id, props);
 
     // VPC con subredes públicas y privadas
-    const vpc = new ec2.Vpc(this, 'BlossomVPC', {
+    const vpc = new ec2.Vpc(this, 'MyVPC', {
       maxAzs: 2,
       natGateways: 1,
       subnetConfiguration: [
