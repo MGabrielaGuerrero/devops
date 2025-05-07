@@ -3,6 +3,9 @@ import { Construct } from 'constructs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as rds from 'aws-cdk-lib/aws-rds';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
+import * as logs from 'aws-cdk-lib/aws-logs';
 
 export class Stack extends cdk.Stack {
   readonly vpc: ec2.Vpc;
@@ -66,6 +69,69 @@ export class Stack extends cdk.Stack {
       deleteAutomatedBackups: true,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       deletionProtection: false,
+    });
+
+
+    const cluster = new ecs.Cluster(this, 'Cluster', {
+      vpc: this.vpc,
+      containerInsights: true,
+    });
+
+    // Log group
+    const logGroup = new logs.LogGroup(this, 'BackendLogGroup', {
+      logGroupName: '/ecs/-backend',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Construir imagen local desde test-api/
+    const backendImage = new ecrAssets.DockerImageAsset(this, 'BackendImage', {
+      directory: '../test-api',
+    });
+
+    // SG para ECS backend
+    const backendSG = new ec2.SecurityGroup(this, 'BackendSG', {
+      vpc: this.vpc,
+      description: 'Permitir acceso a internet y RDS',
+      allowAllOutbound: true,
+    });
+
+    // Permitir ECS acceder al RDS
+    this.dbInstance.connections.allowFrom(backendSG, ec2.Port.tcp(5432));
+
+    // Definir tarea Fargate
+    const taskDef = new ecs.FargateTaskDefinition(this, 'BackendTaskDef', {
+      memoryLimitMiB: 512,
+      cpu: 256,
+    });
+
+    // Variables de entorno
+    taskDef.addContainer('BackendContainer', {
+      image: ecs.ContainerImage.fromDockerImageAsset(backendImage),
+      containerName: 'backend',
+      logging: ecs.LogDriver.awsLogs({
+        logGroup,
+        streamPrefix: 'backend',
+      }),
+      portMappings: [{ containerPort: 4000 }],
+      environment: {
+        SEQ_USER: 'myusername',
+        SEQ_DB: 'test-local',
+        SEQ_PORT: '5432',
+        SEQ_HOST: this.dbInstance.dbInstanceEndpointAddress,
+      },
+      secrets: {
+        SEQ_PW: ecs.Secret.fromSecretsManager(this.dbSecret, 'password'),
+      },
+    });
+
+    // Servicio Fargate para backend
+    new ecs.FargateService(this, 'BackendService', {
+      cluster,
+      taskDefinition: taskDef,
+      assignPublicIp: false,
+      securityGroups: [backendSG],
+      desiredCount: 1,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
     });
   }
 }
