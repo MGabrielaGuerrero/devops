@@ -12,12 +12,14 @@
     "synth": "cdk synth"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
+    "aws-cdk": "2.130.0",
     "ts-node": "^10.0.0",
-    "aws-cdk": "2.130.0"
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "constructs": "^10.0.0",
-    "aws-cdk-lib": "2.130.0"
+    "@aws-cdk/aws-rds": "^1.204.0",
+    "@aws-cdk/aws-secretsmanager": "^1.204.0",
+    "aws-cdk-lib": "2.130.0",
+    "constructs": "^10.0.0"
   }
 }
