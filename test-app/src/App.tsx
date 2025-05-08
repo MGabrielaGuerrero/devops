@@ -2,7 +2,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import axios from "axios";
 import "./App.css";
 
-const URL_API = "http://internal-BackendALB-648775989.us-east-1.elb.amazonaws.com";
+const URL_API = "http://BackendALB-1895284050.us-east-1.elb.amazonaws.com";
 
 interface Task {
   id: number;
