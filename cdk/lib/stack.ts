@@ -53,7 +53,7 @@ export class Stack extends cdk.Stack {
 
     const dbName = new cdk.CfnParameter(this, 'DatabaseName', {
       type: 'String',
-      default: 'test-local',
+      default: 'testlocal',
       description: 'Nombre de la base de datos PostgreSQL',
     });
 
@@ -122,7 +122,7 @@ export class Stack extends cdk.Stack {
       portMappings: [{ containerPort: 4000 }],
       environment: {
         SEQ_USER: 'myusername',
-        SEQ_DB: 'test-local',
+        SEQ_DB: 'testlocal',
         SEQ_PORT: '5432',
         SEQ_HOST: this.dbInstance.dbInstanceEndpointAddress,
         NODE_ENV: 'production'
