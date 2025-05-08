@@ -67,6 +67,7 @@ export class Stack extends cdk.Stack {
       },
       securityGroups: [dbSecurityGroup],
       credentials: rds.Credentials.fromSecret(this.dbSecret),
+      instanceIdentifier: 'postgresDB',
       databaseName: dbName.valueAsString,
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
