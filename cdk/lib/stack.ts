@@ -164,7 +164,8 @@ export class Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
+    // albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
+    
 
     // Crear el ALB 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
@@ -232,7 +233,6 @@ export class Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    frontendSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000));
 
     // Crear el servicio en Fargate
     const frontendService = new ecs.FargateService(this, 'FrontendService', {
@@ -262,7 +262,8 @@ export class Stack extends cdk.Stack {
     frontendListener.addTargetGroups('FrontendRule', {
       targetGroups: [frontendTG],
     });
-    frontendSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000));
+
+    albSG.addIngressRule(frontendSG, ec2.Port.tcp(80),'Permitir HTTP desde el frontend');
 
     backendSG.addIngressRule(frontendSG, ec2.Port.tcp(4000));
     backendSG.addIngressRule(alb.connections.securityGroups[0], ec2.Port.tcp(4000));
