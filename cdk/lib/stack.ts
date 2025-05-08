@@ -169,7 +169,7 @@ export class Stack extends cdk.Stack {
     // Crear el ALB público
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
       vpc: this.vpc,
-      internetFacing: true,
+      internetFacing: false,
       loadBalancerName: 'BackendALB',
       securityGroup: albSG,
       vpcSubnets: {
