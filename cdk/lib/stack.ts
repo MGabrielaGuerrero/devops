@@ -163,12 +163,14 @@ export class Stack extends cdk.Stack {
     // Asociar el backend ECS como destino del ALB
     listener.addTargets('BackendTarget', {
       port: 4000,
-      targets: [backendService], 
+      targets: [backendService],
+      protocol: elbv2.ApplicationProtocol.HTTP, // ✅ AÑADE ESTO
       healthCheck: {
         path: '/',
         interval: cdk.Duration.seconds(30),
       },
     });
+    
   }
 }
 
