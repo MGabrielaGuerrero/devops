@@ -51,11 +51,6 @@ export class Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    const dbName = new cdk.CfnParameter(this, 'DatabaseName', {
-      type: 'String',
-      default: 'testlocal',
-      description: 'Nombre de la base de datos PostgreSQL',
-    });
 
     // Instancia RDS PostgreSQL
     this.dbInstance = new rds.DatabaseInstance(this, 'PostgresDB', {
@@ -68,7 +63,7 @@ export class Stack extends cdk.Stack {
       securityGroups: [dbSecurityGroup],
       credentials: rds.Credentials.fromSecret(this.dbSecret),
       instanceIdentifier: 'postgresDB',
-      databaseName: dbName.valueAsString,
+      databaseName: 'testlocal',
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
       multiAz: false,
@@ -80,122 +75,122 @@ export class Stack extends cdk.Stack {
     });
 
 
-    // const cluster = new ecs.Cluster(this, 'Cluster', {
-    //   vpc: this.vpc,
-    //   containerInsights: true,
-    // });
+    const cluster = new ecs.Cluster(this, 'Cluster', {
+      vpc: this.vpc,
+      containerInsights: true,
+    });
 
-    // // Log group
-    // const logGroup = new logs.LogGroup(this, 'BackendLogGroup', {
-    //   logGroupName: '/ecs/-backend',
-    //   removalPolicy: cdk.RemovalPolicy.DESTROY,
-    // });
+    // Log group
+    const logGroup = new logs.LogGroup(this, 'BackendLogGroup', {
+      logGroupName: '/ecs/-backend',
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
-    // // Construir imagen local desde test-api/
-    // const backendImage = new ecrAssets.DockerImageAsset(this, 'BackendImage', {
-    //   directory: '../test-api',
-    // });
+    // Construir imagen local desde test-api/
+    const backendImage = new ecrAssets.DockerImageAsset(this, 'BackendImage', {
+      directory: '../test-api',
+    });
 
-    // // SG para ECS backend
-    // const backendSG = new ec2.SecurityGroup(this, 'BackendSG', {
-    //   vpc: this.vpc,
-    //   description: 'Permitir acceso a internet y RDS',
-    //   allowAllOutbound: true,
-    // });
+    // SG para ECS backend
+    const backendSG = new ec2.SecurityGroup(this, 'BackendSG', {
+      vpc: this.vpc,
+      description: 'Permitir acceso a internet y RDS',
+      allowAllOutbound: true,
+    });
 
-    // // Permitir ECS acceder al RDS
-    // this.dbInstance.connections.allowFrom(backendSG, ec2.Port.tcp(5432));
+    // Permitir ECS acceder al RDS
+    this.dbInstance.connections.allowFrom(backendSG, ec2.Port.tcp(5432));
 
-    // // Definir tarea Fargate
-    // const taskDef = new ecs.FargateTaskDefinition(this, 'BackendTaskDef', {
-    //   memoryLimitMiB: 512,
-    //   cpu: 256,
-    // });
+    // Definir tarea Fargate
+    const taskDef = new ecs.FargateTaskDefinition(this, 'BackendTaskDef', {
+      memoryLimitMiB: 512,
+      cpu: 256,
+    });
 
-    // // Variables de entorno
-    // taskDef.addContainer('BackendContainer', {
-    //   image: ecs.ContainerImage.fromDockerImageAsset(backendImage),
-    //   containerName: 'backend',
-    //   logging: ecs.LogDriver.awsLogs({
-    //     logGroup,
-    //     streamPrefix: 'backend',
-    //   }),
-    //   portMappings: [{ containerPort: 4000 }],
-    //   environment: {
-    //     SEQ_USER: 'myusername',
-    //     SEQ_DB: 'testlocal',
-    //     SEQ_PORT: '5432',
-    //     SEQ_HOST: this.dbInstance.dbInstanceEndpointAddress,
-    //     NODE_ENV: 'production'
-    //   },
-    //   secrets: {
-    //     SEQ_PW: ecs.Secret.fromSecretsManager(this.dbSecret, 'password'),
-    //   },
-    // });
+    // Variables de entorno
+    taskDef.addContainer('BackendContainer', {
+      image: ecs.ContainerImage.fromDockerImageAsset(backendImage),
+      containerName: 'backend',
+      logging: ecs.LogDriver.awsLogs({
+        logGroup,
+        streamPrefix: 'backend',
+      }),
+      portMappings: [{ containerPort: 4000 }],
+      environment: {
+        SEQ_USER: 'myusername',
+        SEQ_DB: 'testlocal',
+        SEQ_PORT: '5432',
+        SEQ_HOST: this.dbInstance.dbInstanceEndpointAddress,
+        NODE_ENV: 'production'
+      },
+      secrets: {
+        SEQ_PW: ecs.Secret.fromSecretsManager(this.dbSecret, 'password'),
+      },
+    });
 
-    // // Servicio Fargate para backend
-    // const backendService = new ecs.FargateService(this, 'BackendService', {
-    //   cluster,
-    //   taskDefinition: taskDef,
-    //   assignPublicIp: false,
-    //   securityGroups: [backendSG],
-    //   desiredCount: 1,
-    //   vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
-    // });
+    // Servicio Fargate para backend
+    const backendService = new ecs.FargateService(this, 'BackendService', {
+      cluster,
+      taskDefinition: taskDef,
+      assignPublicIp: false,
+      securityGroups: [backendSG],
+      desiredCount: 1,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+    });
 
-    // const scaling = backendService.autoScaleTaskCount({
-    //   minCapacity: 1,
-    //   maxCapacity: 3,
-    // });
+    const scaling = backendService.autoScaleTaskCount({
+      minCapacity: 1,
+      maxCapacity: 3,
+    });
     
-    // scaling.scaleOnCpuUtilization('CpuScaling', {
-    //   targetUtilizationPercent: 60,
-    //   scaleInCooldown: cdk.Duration.seconds(60),
-    //   scaleOutCooldown: cdk.Duration.seconds(60),
-    // });
+    scaling.scaleOnCpuUtilization('CpuScaling', {
+      targetUtilizationPercent: 60,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
     
-    // scaling.scaleOnMemoryUtilization('MemoryScaling', {
-    //   targetUtilizationPercent: 75,
-    //   scaleInCooldown: cdk.Duration.seconds(60),
-    //   scaleOutCooldown: cdk.Duration.seconds(60),
-    // });
+    scaling.scaleOnMemoryUtilization('MemoryScaling', {
+      targetUtilizationPercent: 75,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
     
 
-    // // SG para el ALB
-    // const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
-    //   vpc: this.vpc,
-    //   description: 'Permitir trafico HTTP',
-    //   allowAllOutbound: true,
-    // });
-    // albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
+    // SG para el ALB
+    const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
+      vpc: this.vpc,
+      description: 'Permitir trafico HTTP',
+      allowAllOutbound: true,
+    });
+    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
 
-    // // Crear el ALB público
-    // const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
-    //   vpc: this.vpc,
-    //   internetFacing: true,
-    //   loadBalancerName: 'BackendALB',
-    //   securityGroup: albSG,
-    //   vpcSubnets: {
-    //     subnetType: ec2.SubnetType.PUBLIC,
-    //   },
-    // });
+    // Crear el ALB público
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
+      vpc: this.vpc,
+      internetFacing: true,
+      loadBalancerName: 'BackendALB',
+      securityGroup: albSG,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+    });
 
-    // // Listener en el puerto 80
-    // const listener = alb.addListener('ListenerHTTP', {
-    //   port: 80,
-    //   open: true,
-    // });
+    // Listener en el puerto 80
+    const listener = alb.addListener('ListenerHTTP', {
+      port: 80,
+      open: true,
+    });
 
-    // // Asociar el backend ECS como destino del ALB
-    // listener.addTargets('BackendTarget', {
-    //   port: 4000,
-    //   targets: [backendService],
-    //   protocol: elbv2.ApplicationProtocol.HTTP,
-    //   healthCheck: {
-    //     path: '/',
-    //     interval: cdk.Duration.seconds(30),
-    //   },
-    // });
+    // Asociar el backend ECS como destino del ALB
+    listener.addTargets('BackendTarget', {
+      port: 4000,
+      targets: [backendService],
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      healthCheck: {
+        path: '/',
+        interval: cdk.Duration.seconds(30),
+      },
+    });
     
   }
 }
