@@ -138,10 +138,10 @@ export class Stack extends cdk.Stack {
     // SG para el ALB
     const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
       vpc: this.vpc,
-      description: 'Permitir tráfico HTTP',
+      description: 'Permitir trafico HTTP',
       allowAllOutbound: true,
     });
-    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP público');
+    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
 
     // Crear el ALB público
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
