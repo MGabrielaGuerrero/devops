@@ -6,6 +6,7 @@ import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 export class Stack extends cdk.Stack {
   readonly vpc: ec2.Vpc;
@@ -125,13 +126,48 @@ export class Stack extends cdk.Stack {
     });
 
     // Servicio Fargate para backend
-    new ecs.FargateService(this, 'BackendService', {
+    const backendService = new ecs.FargateService(this, 'BackendService', {
       cluster,
       taskDefinition: taskDef,
       assignPublicIp: false,
       securityGroups: [backendSG],
       desiredCount: 1,
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+    });
+
+    // SG para el ALB
+    const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
+      vpc: this.vpc,
+      description: 'Permitir tráfico HTTP',
+      allowAllOutbound: true,
+    });
+    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP público');
+
+    // Crear el ALB público
+    const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
+      vpc: this.vpc,
+      internetFacing: true,
+      loadBalancerName: 'BlossomBackendALB',
+      securityGroup: albSG,
+      vpcSubnets: {
+        subnetType: ec2.SubnetType.PUBLIC,
+      },
+    });
+
+    // Listener en el puerto 80
+    const listener = alb.addListener('ListenerHTTP', {
+      port: 80,
+      open: true,
+    });
+
+    // Asociar el backend ECS como destino del ALB
+    listener.addTargets('BackendTarget', {
+      port: 4000,
+      targets: [backendService], 
+      healthCheck: {
+        path: '/',
+        interval: cdk.Duration.seconds(30),
+      },
     });
   }
 }
