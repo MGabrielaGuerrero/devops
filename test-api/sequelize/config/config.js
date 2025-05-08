@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const useSSL = process.env.NODE_ENV === 'production';
+
 const basicConfig = {
   username: process.env.SEQ_USER,
   password: process.env.SEQ_PW,
@@ -15,10 +17,11 @@ const basicConfig = {
           rejectUnauthorized: false,
         },
       }
-    : {},
+    : undefined, 
 };
 
 module.exports = {
   development: basicConfig,
   local: basicConfig,
+  production: basicConfig,
 };

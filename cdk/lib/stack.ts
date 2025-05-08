@@ -119,6 +119,7 @@ export class Stack extends cdk.Stack {
         SEQ_DB: 'test-local',
         SEQ_PORT: '5432',
         SEQ_HOST: this.dbInstance.dbInstanceEndpointAddress,
+        NODE_ENV: 'production'
       },
       secrets: {
         SEQ_PW: ecs.Secret.fromSecretsManager(this.dbSecret, 'password'),
