@@ -166,14 +166,14 @@ export class Stack extends cdk.Stack {
 
     albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
 
-    // Crear el ALB público
+    // Crear el ALB 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
       vpc: this.vpc,
       internetFacing: false,
       loadBalancerName: 'BackendALB',
       securityGroup: albSG,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
     });
 
