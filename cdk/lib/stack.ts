@@ -266,7 +266,7 @@ export class Stack extends cdk.Stack {
     albSG.addIngressRule(frontendSG, ec2.Port.tcp(80),'Permitir HTTP desde el frontend');
 
     backendSG.addIngressRule(frontendSG, ec2.Port.tcp(4000));
-    backendSG.addIngressRule(alb.connections.securityGroups[0], ec2.Port.tcp(4000));
+    backendSG.addIngressRule(albSG, ec2.Port.tcp(4000), 'ALB puede acceder al contenedor backend');
 
     const frontendScaling = frontendService.autoScaleTaskCount({
       minCapacity: 1,
