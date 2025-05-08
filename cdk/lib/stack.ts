@@ -163,6 +163,7 @@ export class Stack extends cdk.Stack {
       description: 'Permitir trafico HTTP',
       allowAllOutbound: true,
     });
+
     albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
 
     // Crear el ALB público
@@ -194,6 +195,16 @@ export class Stack extends cdk.Stack {
     });
 
 
+    const frontendAlb = new elbv2.ApplicationLoadBalancer(this, 'FrontendALB', {
+      vpc: this.vpc,
+      internetFacing: true,
+      loadBalancerName: 'FrontendALB',
+    });
+
+    const frontendListener = frontendAlb.addListener('FrontendListener', {
+      port: 80,
+      open: true,
+    });
 
     // Imagen del frontend desde Dockerfile
     const frontendImage = ecs.ContainerImage.fromAsset('../test-app');
@@ -233,12 +244,11 @@ export class Stack extends cdk.Stack {
       securityGroups: [frontendSG],
     });
 
-    // Target group del frontend (escucha en 3000)
     const frontendTG = new elbv2.ApplicationTargetGroup(this, 'FrontendTG', {
       vpc: this.vpc,
-      targetType: elbv2.TargetType.IP,
       port: 3000,
       protocol: elbv2.ApplicationProtocol.HTTP,
+      targetType: elbv2.TargetType.IP,
       healthCheck: {
         path: '/',
         interval: cdk.Duration.seconds(30),
@@ -246,17 +256,43 @@ export class Stack extends cdk.Stack {
         healthyHttpCodes: '200',
       },
     });
-
-    // Enlazar el servicio al target group
+    
     frontendService.attachToApplicationTargetGroup(frontendTG);
-
-    // Listener ya existente del ALB (puerto 80)
-    listener.addTargetGroups('FrontendRoute', {
-      priority: 10,
-      conditions: [
-        elbv2.ListenerCondition.pathPatterns(['/']),
-      ],
+    
+    frontendListener.addTargetGroups('FrontendRule', {
       targetGroups: [frontendTG],
+    });
+    frontendSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000));
+
+    backendSG.addIngressRule(frontendSG, ec2.Port.tcp(4000));
+    backendSG.addIngressRule(alb.connections.securityGroups[0], ec2.Port.tcp(4000));
+
+    const frontendScaling = frontendService.autoScaleTaskCount({
+      minCapacity: 1,
+      maxCapacity: 3, // ajusta según necesidad
+    });
+    
+    // Escalar por CPU
+    frontendScaling.scaleOnCpuUtilization('FrontendCpuScaling', {
+      targetUtilizationPercent: 60, // umbral
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+
+    frontendScaling.scaleOnMemoryUtilization('FrontendMemoryScaling', {
+      targetUtilizationPercent: 70,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+
+    new cdk.CfnOutput(this, 'FrontendURL', {
+      value: `http://${frontendAlb.loadBalancerDnsName}/`,
+      description: 'Frontend ALB URL',
+    });
+
+    new cdk.CfnOutput(this, 'BackendURL', {
+      value: `http://${alb.loadBalancerDnsName}/`,
+      description: 'URL pública del backend',
     });
 
   }
