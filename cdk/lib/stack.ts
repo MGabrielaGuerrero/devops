@@ -164,17 +164,17 @@ export class Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
-    albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
+    // albSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80), 'Permitir HTTP publico');
     
 
     // Crear el ALB 
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
       vpc: this.vpc,
-      internetFacing: true,
+      internetFacing: false,
       loadBalancerName: 'BackendALB',
       securityGroup: albSG,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PUBLIC,
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
     });
 
@@ -285,6 +285,33 @@ export class Stack extends cdk.Stack {
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
+
+    // TaskDefinition para curl
+const curlTaskDef = new ecs.FargateTaskDefinition(this, 'CurlTaskDef', {
+  cpu: 256,
+  memoryLimitMiB: 512,
+});
+
+curlTaskDef.addContainer('CurlTest', {
+  image: ecs.ContainerImage.fromRegistry('curlimages/curl'),
+  command: [
+    'sh',
+    '-c',
+    `curl -v http://${alb.loadBalancerDnsName}/ || sleep 3600`,
+  ],
+  logging: ecs.LogDriver.awsLogs({ streamPrefix: 'curl-test' }),
+});
+
+// Servicio Fargate temporal con esta tarea
+new ecs.FargateService(this, 'CurlService', {
+  cluster,
+  taskDefinition: curlTaskDef,
+  assignPublicIp: false,
+  desiredCount: 1,
+  securityGroups: [frontendSG], // Puede ser backendSG también
+  vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+});
+
 
     new cdk.CfnOutput(this, 'FrontendURL', {
       value: `http://${frontendAlb.loadBalancerDnsName}/`,

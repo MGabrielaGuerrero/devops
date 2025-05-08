@@ -18,8 +18,10 @@ app.get("/", async (req, res) => {
 });
 
 app.get("/tasks", async (req, res) => {
+  console.log("🚀 ~ app.get ~ /tasks:")
   try {
     const tasks = await Task.findAll();
+    console.log("🚀 ~ app.get ~ tasks:", tasks)
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ error: error.message });
