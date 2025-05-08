@@ -51,6 +51,12 @@ export class Stack extends cdk.Stack {
       allowAllOutbound: true,
     });
 
+    const dbName = new cdk.CfnParameter(this, 'DatabaseName', {
+      type: 'String',
+      default: 'test-local',
+      description: 'Nombre de la base de datos PostgreSQL',
+    });
+
     // Instancia RDS PostgreSQL
     this.dbInstance = new rds.DatabaseInstance(this, 'PostgresDB', {
       engine: rds.DatabaseInstanceEngine.postgres({ version: rds.PostgresEngineVersion.VER_15 }),
@@ -61,7 +67,7 @@ export class Stack extends cdk.Stack {
       },
       securityGroups: [dbSecurityGroup],
       credentials: rds.Credentials.fromSecret(this.dbSecret),
-      databaseName: 'test_local',
+      databaseName: dbName.valueAsString,
       allocatedStorage: 20,
       maxAllocatedStorage: 100,
       multiAz: false,

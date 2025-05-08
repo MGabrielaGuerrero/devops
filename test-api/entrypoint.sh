@@ -13,6 +13,7 @@ echo "Instalando dependencias"
 npm install
 
 echo "Ejecutando migraciones"
+# npx sequelize-cli db:create || echo "DB ya existe"
 npx sequelize-cli db:migrate
 
 echo "Iniciando app"
