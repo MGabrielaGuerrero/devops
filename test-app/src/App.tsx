@@ -2,7 +2,7 @@ import React, { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import axios from "axios";
 import "./App.css";
 
-const URL_API = "http://localhost:4000";
+const URL_API = "http://backendalb-1163219423.us-east-1.elb.amazonaws.com";
 
 interface Task {
   id: number;

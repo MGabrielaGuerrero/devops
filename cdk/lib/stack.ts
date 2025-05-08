@@ -8,6 +8,7 @@ import * as ecrAssets from 'aws-cdk-lib/aws-ecr-assets';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
+
 export class Stack extends cdk.Stack {
   readonly vpc: ec2.Vpc;
   readonly dbInstance: rds.DatabaseInstance;
@@ -142,19 +143,19 @@ export class Stack extends cdk.Stack {
       minCapacity: 1,
       maxCapacity: 3,
     });
-    
+
     scaling.scaleOnCpuUtilization('CpuScaling', {
       targetUtilizationPercent: 60,
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
-    
+
     scaling.scaleOnMemoryUtilization('MemoryScaling', {
       targetUtilizationPercent: 75,
       scaleInCooldown: cdk.Duration.seconds(60),
       scaleOutCooldown: cdk.Duration.seconds(60),
     });
-    
+
 
     // SG para el ALB
     const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
@@ -191,7 +192,73 @@ export class Stack extends cdk.Stack {
         interval: cdk.Duration.seconds(30),
       },
     });
-    
+
+
+
+    // Imagen del frontend desde Dockerfile
+    const frontendImage = ecs.ContainerImage.fromAsset('../test-app');
+
+    // Task definition para el frontend
+    const frontendTaskDef = new ecs.FargateTaskDefinition(this, 'FrontendTaskDef', {
+      cpu: 256,
+      memoryLimitMiB: 512,
+    });
+
+    const frontendContainer = frontendTaskDef.addContainer('FrontendContainer', {
+      image: frontendImage,
+      logging: ecs.LogDriver.awsLogs({ streamPrefix: 'frontend' }),
+      portMappings: [
+        {
+          containerPort: 3000,
+        },
+      ],
+    });
+
+    // Security group para permitir tráfico
+    const frontendSG = new ec2.SecurityGroup(this, 'FrontendSG', {
+      vpc: this.vpc,
+      description: 'Allow HTTP access to frontend',
+      allowAllOutbound: true,
+    });
+
+    frontendSG.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(3000));
+
+    // Crear el servicio en Fargate
+    const frontendService = new ecs.FargateService(this, 'FrontendService', {
+      cluster,
+      taskDefinition: frontendTaskDef,
+      assignPublicIp: false,
+      desiredCount: 1,
+      vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
+      securityGroups: [frontendSG],
+    });
+
+    // Target group del frontend (escucha en 3000)
+    const frontendTG = new elbv2.ApplicationTargetGroup(this, 'FrontendTG', {
+      vpc: this.vpc,
+      targetType: elbv2.TargetType.IP,
+      port: 3000,
+      protocol: elbv2.ApplicationProtocol.HTTP,
+      healthCheck: {
+        path: '/',
+        interval: cdk.Duration.seconds(30),
+        timeout: cdk.Duration.seconds(5),
+        healthyHttpCodes: '200',
+      },
+    });
+
+    // Enlazar el servicio al target group
+    frontendService.attachToApplicationTargetGroup(frontendTG);
+
+    // Listener ya existente del ALB (puerto 80)
+    listener.addTargetGroups('FrontendRoute', {
+      priority: 10,
+      conditions: [
+        elbv2.ListenerCondition.pathPatterns(['/']),
+      ],
+      targetGroups: [frontendTG],
+    });
+
   }
 }
 
