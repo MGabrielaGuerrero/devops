@@ -50,6 +50,18 @@ app.delete("/tasks/:id", async (req, res) => {
   }
 });
 
+// Simulación de carga
+// Esta ruta simula una carga de CPU durante 10 segundos
+app.get("/load", (req, res) => {
+  const start = Date.now();
+  while (Date.now() - start < 10000) {
+    Math.random(); // Simula carga
+  }
+  res.send("Carga simulada por 10s");
+});
+
+
+
 sequelize
   .sync()
   .then(() => {

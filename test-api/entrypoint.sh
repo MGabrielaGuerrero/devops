@@ -1,14 +1,20 @@
 #!/bin/sh
 
-# Wait for the PostgreSQL container to be ready
-until nc -z -v -w30 testPostgresSQLContainer 5432
+set -x
+
+echo "Esperando DB en $SEQ_HOST:$SEQ_PORT"
+until nc -z -v -w30 $SEQ_HOST $SEQ_PORT
 do
-  echo "Waiting for PostgreSQL database connection..."
+  echo "Esperando conexión con PostgreSQL..."
   sleep 1
 done
 
-# Run database creation and migration
-npx sequelize-cli db:migrate
+echo "Instalando dependencias"
 npm install
-# Start the application
+
+echo "Ejecutando migraciones"
+npx sequelize-cli db:migrate
+
+echo "Iniciando app"
 npm run start
+

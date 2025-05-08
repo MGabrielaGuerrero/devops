@@ -135,6 +135,24 @@ export class Stack extends cdk.Stack {
       vpcSubnets: { subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS },
     });
 
+    const scaling = backendService.autoScaleTaskCount({
+      minCapacity: 1,
+      maxCapacity: 3,
+    });
+    
+    scaling.scaleOnCpuUtilization('CpuScaling', {
+      targetUtilizationPercent: 60,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+    
+    scaling.scaleOnMemoryUtilization('MemoryScaling', {
+      targetUtilizationPercent: 75,
+      scaleInCooldown: cdk.Duration.seconds(60),
+      scaleOutCooldown: cdk.Duration.seconds(60),
+    });
+    
+
     // SG para el ALB
     const albSG = new ec2.SecurityGroup(this, 'ALBSecurityGroup', {
       vpc: this.vpc,
@@ -147,7 +165,7 @@ export class Stack extends cdk.Stack {
     const alb = new elbv2.ApplicationLoadBalancer(this, 'BackendALB', {
       vpc: this.vpc,
       internetFacing: true,
-      loadBalancerName: 'BlossomBackendALB',
+      loadBalancerName: 'BackendALB',
       securityGroup: albSG,
       vpcSubnets: {
         subnetType: ec2.SubnetType.PUBLIC,
@@ -164,7 +182,7 @@ export class Stack extends cdk.Stack {
     listener.addTargets('BackendTarget', {
       port: 4000,
       targets: [backendService],
-      protocol: elbv2.ApplicationProtocol.HTTP, // ✅ AÑADE ESTO
+      protocol: elbv2.ApplicationProtocol.HTTP,
       healthCheck: {
         path: '/',
         interval: cdk.Duration.seconds(30),
